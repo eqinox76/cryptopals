@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"log"
@@ -80,6 +81,8 @@ func guessKeyLenth(max int, data []byte) Histo {
 	return histo
 }
 
+// assumes a english text encrypted with a one character length password
+// returns the key and decrypted text
 func breakOneChar(input []byte) (byte, []byte) {
 	distribution := "!-',.ULDRHSNIOATEuldrhs nioate"
 
@@ -121,4 +124,33 @@ func breakOneChar(input []byte) (byte, []byte) {
 	//fmt.Println(key, "===============================================")
 
 	return key, result
+}
+
+func breakVarChar(keyLength int, input []byte) (string, []byte){
+
+	ciphers := make([]bytes.Buffer, keyLength)
+	texts := make([]bytes.Buffer, keyLength)
+
+	for i, v := range input {
+		ciphers[i % keyLength].WriteByte(v)
+	}
+
+	var keyBuilder strings.Builder
+
+	for i, buffer := range ciphers {
+		key, text := breakOneChar(buffer.Bytes())
+		texts[i].Write(text)
+		keyBuilder.WriteByte(key)
+	}
+
+	//fmt.Println("key:", keyBuilder.String())
+
+	result := bytes.Buffer{}
+	for i := range getSet1Ch6Text() {
+		b, _ := texts[i % keyLength].ReadByte()
+
+		result.WriteByte(b)
+	}
+
+	return keyBuilder.String(), result.Bytes()
 }
